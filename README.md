@@ -15,9 +15,10 @@ a safe, instantly-visible proof that the control channel works end to end.
 ## The protocol it replays (all reconstructed from the captures)
 
 ```
-TCP :10050  resolve(["Controller"])        -> Controller IOR @ host:49160
-TCP :49160  Controller.Login(user,hash,..) -> SystemControl ref (acknowledged)
-            Controller.GetLaser()          -> Laser IOR
+TCP :10050  resolve(["Controller"])              -> Controller IOR @ host:49160
+TCP :49160  Controller.Login(user,hash,..)       -> SystemControl ref
+            SystemControl.GetMachineControl()    -> MachineControl ref
+            MachineControl.GetLaser()            -> Laser IOR
             Laser.SetAttribute("pilotOn", any{boolean})
 ```
 

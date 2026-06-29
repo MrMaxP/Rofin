@@ -18,7 +18,8 @@
 //       -> CosNaming resolve(["Controller"]) -> Controller IOR @ <host>:49160
 //    2. TCP connect to <host>:49160  (one connection; objects addressed by key)
 //       -> Controller.Login("operator", <md5-hash>, false) -> SystemControl ref
-//       -> Controller.GetLaser()                           -> Laser IOR
+//       -> SystemControl.GetMachineControl()               -> MachineControl ref
+//       -> MachineControl.GetLaser()                       -> Laser IOR
 //       -> Laser.SetAttribute("pilotOn", any{boolean})
 //
 //  Wire facts that matter:
@@ -307,40 +308,83 @@ namespace RofinPilotTest
         CdrR InvokeOk(byte[] objKey, string op, Action<Cdr> writeArgs, int minor = 2)
         {
             var (st, body) = Invoke(objKey, op, writeArgs, minor);
+            if (st == 2)  // SYSTEM_EXCEPTION
+            {
+                // Read the exception: repository_id (string) + minor_code (ulong) + completion_status (ulong)
+                try
+                {
+                    string exId = body.Str();
+                    uint minorCode = body.ULong();
+                    uint completionStatus = body.ULong();
+                    throw new ApplicationException($"{op} raised SYSTEM_EXCEPTION: {exId}, minor={minorCode}, completion={completionStatus}");
+                }
+                catch (Exception ex) when (!(ex is ApplicationException))
+                {
+                    throw new ApplicationException($"{op} returned SYSTEM_EXCEPTION but couldn't parse it: {ex.Message}");
+                }
+            }
             if (st != 0)
-                throw new ApplicationException($"{op} returned reply_status {st} (0=NO_EXCEPTION, 2=SYSTEM_EXCEPTION)");
+                throw new ApplicationException($"{op} returned reply_status {st} (0=NO_EXCEPTION, 1=USER_EXCEPTION, 2=SYSTEM_EXCEPTION, 3=LOCATION_FORWARD)");
             return body;
         }
 
         // ---- typed operations -------------------------------------------------
 
         // CosNaming resolve(["Controller"]) -> ObjRef
+        // Handles LOCATION_FORWARD by retrying with the forwarded object key
         public ObjRef ResolveName(byte[] namingKey, string name)
         {
-            var body = InvokeOk(namingKey, "resolve", c =>
+            var (st, body) = Invoke(namingKey, "resolve", c =>
             {
                 c.ULong(1);          // Name = sequence<NameComponent> length 1
                 c.Str(name);         // NameComponent.id
                 c.Str("");           // NameComponent.kind = ""
             }, Config.NamingGiopMinor);
+
+            // Handle LOCATION_FORWARD by retrying with the forwarded key
+            if (st == 3)  // LOCATION_FORWARD
+            {
+                var forwarded = ReadIor(body);
+                Console.WriteLine($"    -> LOCATION_FORWARD, retrying with new key...");
+                body = InvokeOk(forwarded.Key, "resolve", c =>
+                {
+                    c.ULong(1);
+                    c.Str(name);
+                    c.Str("");
+                }, Config.NamingGiopMinor);
+            }
+            else if (st != 0)
+            {
+                throw new ApplicationException($"resolve returned reply_status {st}");
+            }
+
             return ReadIor(body);
         }
 
-        // Controller.Login(user, hash, flag) -> (SystemControl ref, ignored here)
-        public void Login(byte[] ctrlKey, string user, string hash, bool flag)
+        // Controller.Login(user, hash, flag) -> SystemControl ref
+        public ObjRef Login(byte[] ctrlKey, string user, string hash, bool flag)
         {
-            InvokeOk(ctrlKey, "Login", c =>
+            var body = InvokeOk(ctrlKey, "Login", c =>
             {
                 c.Str(user);
                 c.Str(hash);
                 c.Bool(flag);
             });
+            // Login returns a SystemControl IOR - read and return it
+            return ReadIor(body);
         }
 
-        // Controller.GetLaser() -> ObjRef
-        public ObjRef GetLaser(byte[] ctrlKey)
+        // SystemControl.GetMachineControl() -> ObjRef
+        public ObjRef GetMachineControl(byte[] sysCtrlKey)
         {
-            var body = InvokeOk(ctrlKey, "GetLaser", c => { /* void */ });
+            var body = InvokeOk(sysCtrlKey, "GetMachineControl", c => { /* void */ });
+            return ReadIor(body);
+        }
+
+        // MachineControl.GetLaser() -> ObjRef
+        public ObjRef GetLaser(byte[] machineCtrlKey)
+        {
+            var body = InvokeOk(machineCtrlKey, "GetLaser", c => { /* void */ });
             return ReadIor(body);
         }
 
@@ -350,8 +394,9 @@ namespace RofinPilotTest
             InvokeOk(laserKey, "SetAttribute", c =>
             {
                 c.Str("pilotOn");
-                c.ULong(8);          // any: TypeCode kind tk_boolean (8)
-                c.Bool(on);          // any: the value
+                // CORBA Any with simple TypeCode: just the kind + value, no encapsulation
+                c.Raw(new byte[] { 0x00, 0x00, 0x00, 0x08 });  // TypeCode tk_boolean
+                c.Raw(new byte[] { (byte)(on ? 1 : 0), 0x00 }); // boolean value + padding
             });
         }
 
@@ -427,31 +472,36 @@ namespace RofinPilotTest
                 // 2) talk to the controller on its own endpoint (usually :49160)
                 using (var conn = new GiopConn(controller.Host, controller.Port))
                 {
+                    ObjRef sysControl = null;
                     if (Config.DoLogin)
                     {
                         Console.WriteLine($"[2] Login(\"{Config.LoginUser}\", <hash>, {Config.LoginFlag})");
-                        conn.Login(controller.Key, Config.LoginUser, Config.LoginHash, Config.LoginFlag);
-                        Console.WriteLine("    -> OK");
+                        sysControl = conn.Login(controller.Key, Config.LoginUser, Config.LoginHash, Config.LoginFlag);
+                        Console.WriteLine($"    -> {sysControl}");
                     }
 
-                    Console.WriteLine("[3] GetLaser()");
-                    var laser = conn.GetLaser(controller.Key);
+                    Console.WriteLine("[3] GetMachineControl()");
+                    var machineControl = conn.GetMachineControl(sysControl.Key);
+                    Console.WriteLine($"    -> {machineControl}");
+
+                    Console.WriteLine("[4] GetLaser()");
+                    var laser = conn.GetLaser(machineControl.Key);
                     Console.WriteLine($"    -> {laser}");
 
                     switch (mode)
                     {
                         case "on":
-                            Console.WriteLine("[4] pilotOn = TRUE");
+                            Console.WriteLine("[5] pilotOn = TRUE");
                             conn.SetPilot(laser.Key, true);
                             Console.WriteLine("    pilot is ON (left on).");
                             break;
                         case "off":
-                            Console.WriteLine("[4] pilotOn = FALSE");
+                            Console.WriteLine("[5] pilotOn = FALSE");
                             conn.SetPilot(laser.Key, false);
                             Console.WriteLine("    pilot is OFF.");
                             break;
                         default: // blink
-                            Console.WriteLine($"[4] pilotOn = TRUE  (holding {blinkSeconds}s)");
+                            Console.WriteLine($"[5] pilotOn = TRUE  (holding {blinkSeconds}s)");
                             conn.SetPilot(laser.Key, true);
                             Thread.Sleep(blinkSeconds * 1000);
                             Console.WriteLine("    pilotOn = FALSE");
