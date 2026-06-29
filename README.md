@@ -15,7 +15,8 @@ a safe, instantly-visible proof that the control channel works end to end.
 ## The protocol it replays (all reconstructed from the captures)
 
 ```
-TCP :10050  resolve(["Controller"])              -> Controller IOR @ host:49160
+TCP :10050  resolve(["Controller"])              -> LOCATION_FORWARD (status=3)
+                                                   -> Controller IOR @ host:49160
 TCP :49160  Controller.Login(user,hash,..)       -> SystemControl ref
             SystemControl.GetMachineControl()    -> MachineControl ref
             MachineControl.GetLaser()            -> Laser IOR
@@ -25,8 +26,11 @@ TCP :49160  Controller.Login(user,hash,..)       -> SystemControl ref
 Key facts baked in: GIOP 1.2 requests are big-endian; reply byte order is read
 per-message; CORBA strings include the trailing NUL while object keys do not;
 the `pilotOn` value rides in an `any` whose TypeCode is `tk_boolean` (8) followed
-by one octet. The `SetAttribute`, `Login`, `resolve`, and the full request
-framing were verified byte-for-byte against `WS-PilotOnOff` / `WS-LaserConsoleBoot`.
+by the boolean value (one octet) plus a padding byte (crucial for proper alignment).
+The naming service normally returns LOCATION_FORWARD (status=3), which the code
+handles by retrying with the forwarded object key. The `SetAttribute`, `Login`,
+`resolve`, and the full request framing were verified byte-for-byte against
+`WS-PilotOnOff` / `WS-LaserConsoleBoot`.
 
 Object keys embed a per-boot instance GUID, so nothing is hardcoded — the Laser
 reference is discovered live via `GetLaser()` each run.
