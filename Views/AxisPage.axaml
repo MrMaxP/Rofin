@@ -1,0 +1,235 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LaserConsole.ViewModels"
+             x:Class="LaserConsole.Views.AxisPage"
+             x:DataType="vm:AxisPageViewModel"
+             Background="#1E1E2E"
+             FontFamily="Inter,Segoe UI,system-ui,sans-serif">
+
+  <DockPanel Margin="28,24,28,20">
+
+    <!-- ── Page title ────────────────────────────────────────────────────── -->
+    <TextBlock DockPanel.Dock="Top"
+               Text="AXIS CONTROL  —  Z (LIF)"
+               FontSize="11" FontWeight="SemiBold"
+               Foreground="#6C7086" LetterSpacing="1.5"
+               Margin="0,0,0,20"/>
+
+    <!-- ── Three-column layout ───────────────────────────────────────────── -->
+    <Grid ColumnDefinitions="230,*,210">
+
+      <!-- ── DRO card ─────────────────────────────────────────────────────── -->
+      <Border Grid.Column="0"
+              Background="#181825"
+              CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Margin="0,0,16,0"
+              Padding="18,16">
+        <StackPanel Spacing="16">
+
+          <TextBlock Text="POSITION"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+
+          <!-- Large digital readout -->
+          <StackPanel Spacing="2">
+            <TextBlock Text="{Binding PositionText}"
+                       FontFamily="Consolas,Cascadia Code,monospace"
+                       FontSize="40" FontWeight="Bold"
+                       Foreground="#CDD6F4"
+                       HorizontalAlignment="Right"/>
+            <TextBlock Text="mm"
+                       FontSize="14" Foreground="#6C7086"
+                       HorizontalAlignment="Right"/>
+          </StackPanel>
+
+          <!-- Travel progress bar: left=TOP (-0.1mm), right=BOTTOM (119.5mm) -->
+          <StackPanel Spacing="5" Margin="0,4,0,0">
+            <Grid ColumnDefinitions="*,*">
+              <TextBlock Grid.Column="0" Text="{Binding SWTopText}"
+                         FontSize="10" Foreground="#6C7086"
+                         FontFamily="Consolas,Cascadia Code,monospace"/>
+              <TextBlock Grid.Column="1" Text="{Binding SWBottomText}"
+                         FontSize="10" Foreground="#6C7086"
+                         FontFamily="Consolas,Cascadia Code,monospace"
+                         HorizontalAlignment="Right"/>
+            </Grid>
+            <ProgressBar Minimum="0" Maximum="100"
+                         Value="{Binding PositionPercent}"
+                         Height="8"
+                         CornerRadius="4"
+                         Foreground="#89B4FA"
+                         Background="#313244"/>
+            <Grid ColumnDefinitions="*,*">
+              <TextBlock Grid.Column="0" Text="TOP" FontSize="9" Foreground="#45475A"/>
+              <TextBlock Grid.Column="1" Text="BOTTOM" FontSize="9" Foreground="#45475A"
+                         HorizontalAlignment="Right"/>
+            </Grid>
+          </StackPanel>
+
+          <Rectangle Height="1" Fill="#313244" Margin="0,4"/>
+
+          <!-- Limits info -->
+          <StackPanel Spacing="6">
+            <TextBlock Text="SW LIMITS"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+            <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+              <TextBlock Grid.Column="0" Text="Top (min)" FontSize="12" Foreground="#6C7086"/>
+              <TextBlock Grid.Column="1" Text="{Binding SWTopText}"
+                         FontSize="12" Foreground="#A6ADC8"
+                         FontFamily="Consolas,Cascadia Code,monospace"/>
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+              <TextBlock Grid.Column="0" Text="Bottom (max)" FontSize="12" Foreground="#6C7086"/>
+              <TextBlock Grid.Column="1" Text="{Binding SWBottomText}"
+                         FontSize="12" Foreground="#A6ADC8"
+                         FontFamily="Consolas,Cascadia Code,monospace"/>
+            </Grid>
+          </StackPanel>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ── Jog controls card ─────────────────────────────────────────────── -->
+      <Border Grid.Column="1"
+              Background="#181825"
+              CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Margin="0,0,16,0"
+              Padding="24,20">
+        <StackPanel Spacing="24" VerticalAlignment="Center">
+
+          <TextBlock Text="JOG AXIS"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+
+          <!-- Direction header -->
+          <Grid ColumnDefinitions="*,80,*">
+            <TextBlock Grid.Column="0"
+                       Text="▼ BED DOWN (away from laser)"
+                       FontSize="12" Foreground="#89B4FA"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Grid.Column="2"
+                       Text="▲ BED UP (toward laser)"
+                       FontSize="12" Foreground="#A6E3A1"
+                       HorizontalAlignment="Center"/>
+          </Grid>
+
+          <!-- Jog button row -->
+          <Grid ColumnDefinitions="*,*,80,*,*" RowDefinitions="Auto,Auto">
+
+            <!-- Fast down -->
+            <Button Grid.Row="0" Grid.Column="0"
+                    Command="{Binding FastDownCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Margin="0,0,5,0" Padding="0,18"
+                    FontSize="24" FontWeight="Bold"
+                    Background="#1A2A3A"
+                    Foreground="#89B4FA"
+                    CornerRadius="6"
+                    Content="▼▼"/>
+
+            <!-- Slow down -->
+            <Button Grid.Row="0" Grid.Column="1"
+                    Command="{Binding SlowDownCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Margin="0,0,5,0" Padding="0,18"
+                    FontSize="24" FontWeight="Bold"
+                    Background="#1A2A3A"
+                    Foreground="#89B4FA"
+                    CornerRadius="6"
+                    Content="▼"/>
+
+            <!-- STOP centre -->
+            <Button Grid.Row="0" Grid.Column="2"
+                    Command="{Binding StopCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="0,18"
+                    FontSize="13" FontWeight="Bold"
+                    Background="#3A1E22"
+                    Foreground="#F38BA8"
+                    CornerRadius="6"
+                    Content="■ STOP"/>
+
+            <!-- Slow up -->
+            <Button Grid.Row="0" Grid.Column="3"
+                    Command="{Binding SlowUpCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Margin="5,0,0,0" Padding="0,18"
+                    FontSize="24" FontWeight="Bold"
+                    Background="#1A3A2A"
+                    Foreground="#A6E3A1"
+                    CornerRadius="6"
+                    Content="▲"/>
+
+            <!-- Fast up -->
+            <Button Grid.Row="0" Grid.Column="4"
+                    Command="{Binding FastUpCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Margin="5,0,0,0" Padding="0,18"
+                    FontSize="24" FontWeight="Bold"
+                    Background="#1A3A2A"
+                    Foreground="#A6E3A1"
+                    CornerRadius="6"
+                    Content="▲▲"/>
+
+            <!-- Sub-labels -->
+            <TextBlock Grid.Row="1" Grid.Column="0"
+                       Text="FAST" FontSize="10" Foreground="#45475A"
+                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+            <TextBlock Grid.Row="1" Grid.Column="1"
+                       Text="SLOW" FontSize="10" Foreground="#45475A"
+                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+            <TextBlock Grid.Row="1" Grid.Column="3"
+                       Text="SLOW" FontSize="10" Foreground="#45475A"
+                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+            <TextBlock Grid.Row="1" Grid.Column="4"
+                       Text="FAST" FontSize="10" Foreground="#45475A"
+                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+          </Grid>
+
+          <TextBlock Text="Click to start jogging. Click  ■ STOP  to halt the axis."
+                     FontSize="11" Foreground="#45475A"
+                     HorizontalAlignment="Center"/>
+
+        </StackPanel>
+      </Border>
+
+      <!-- ── Reference card ────────────────────────────────────────────────── -->
+      <Border Grid.Column="2"
+              Background="#181825"
+              CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Padding="18,16">
+        <StackPanel Spacing="16">
+
+          <TextBlock Text="REFERENCE"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+
+          <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#A6ADC8" LineHeight="18"
+                     Text="Drives the bed to the hardware endstop to establish the zero reference.&#10;&#10;Position is unreliable until reference is run after power-on."/>
+
+          <Button Content="▼  REFERENCE DRIVE"
+                  Command="{Binding ReferenceCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Padding="0,12" Margin="0,4,0,0"
+                  FontSize="13" FontWeight="SemiBold"
+                  Background="#2A2A45"
+                  Foreground="#89B4FA"
+                  CornerRadius="6"/>
+
+        </StackPanel>
+      </Border>
+
+    </Grid>
+
+  </DockPanel>
+</UserControl>

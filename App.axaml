@@ -1,0 +1,28 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LaserConsole.ViewModels"
+             xmlns:views="using:LaserConsole.Views"
+             x:Class="LaserConsole.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+
+  <!--
+    Maps ViewModel types to their View so ContentControl can render
+    the current page without any code-behind page switching.
+  -->
+  <Application.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:StatusPageViewModel}">
+      <views:StatusPage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:DevicesPageViewModel}">
+      <views:DevicesPage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:AxisPageViewModel}">
+      <views:AxisPage />
+    </DataTemplate>
+  </Application.DataTemplates>
+
+</Application>

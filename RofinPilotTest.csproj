@@ -1,9 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>RofinPilotTest</AssemblyName>
+    <AssemblyName>LaserConsole</AssemblyName>
+    <RootNamespace>LaserConsole</RootNamespace>
     <LangVersion>latest</LangVersion>
-    <Nullable>disable</Nullable>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia"              Version="12.0.5" />
+    <PackageReference Include="Avalonia.Desktop"      Version="12.0.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Fonts.Inter"  Version="12.0.5" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,121 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LaserConsole.ViewModels"
+        x:Class="LaserConsole.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="LaserConsole"
+        Width="1200" Height="780"
+        MinWidth="900" MinHeight="600"
+        Background="#1E1E2E"
+        FontFamily="Inter,Segoe UI,system-ui,sans-serif">
+
+  <DockPanel>
+
+    <!-- ── Status bar ──────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom" Height="30" Background="#11111B"
+            BorderBrush="#313244" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="*,Auto" Margin="14,0">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#A6ADC8"/>
+        </StackPanel>
+        <TextBlock Grid.Column="1" Text="{Binding CurrentTime}"
+                   FontSize="12" Foreground="#6C7086" VerticalAlignment="Center"
+                   FontFamily="Consolas,monospace"/>
+      </Grid>
+    </Border>
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Left" Width="220" Background="#181825"
+            BorderBrush="#313244" BorderThickness="0,0,1,0">
+      <DockPanel Margin="12,16,12,16">
+
+        <!-- App title -->
+        <StackPanel DockPanel.Dock="Top" Margin="4,0,0,28" Spacing="3">
+          <TextBlock Text="LASER CONSOLE" FontSize="13" FontWeight="Bold"
+                     Foreground="#89B4FA" LetterSpacing="1.5"/>
+          <TextBlock Text="Rofin EasyMark E10" FontSize="11" Foreground="#6C7086"/>
+        </StackPanel>
+
+        <!-- Connection panel (pinned to bottom) -->
+        <StackPanel DockPanel.Dock="Bottom" Spacing="8">
+          <Rectangle Height="1" Fill="#313244" Margin="0,0,0,4"/>
+          <TextBlock Text="CONNECTION" FontSize="10" Foreground="#6C7086"
+                     LetterSpacing="1.2" Margin="2,0"/>
+          <TextBox Text="{Binding Host}"
+                   PlaceholderText="Host / IP"
+                   FontSize="13"
+                   Padding="8,6"/>
+          <StackPanel Orientation="Horizontal" Spacing="7" Margin="2,0">
+            <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding StatusText}" FontSize="12"
+                       Foreground="#A6ADC8" VerticalAlignment="Center"/>
+          </StackPanel>
+          <Button Content="Connect"
+                  Command="{Binding ConnectCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  IsVisible="{Binding IsDisconnected}"
+                  Padding="0,8"/>
+          <Button Content="Disconnect"
+                  Command="{Binding DisconnectCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  IsVisible="{Binding IsConnected}"
+                  Padding="0,8"/>
+        </StackPanel>
+
+        <!-- Navigation -->
+        <ListBox SelectedIndex="{Binding SelectedPageIndex, Mode=TwoWay}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Margin="0,0,0,12">
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="Padding"      Value="10,9"/>
+              <Setter Property="CornerRadius" Value="6"/>
+              <Setter Property="Margin"       Value="0,1"/>
+              <Setter Property="Foreground"   Value="#A6ADC8"/>
+            </Style>
+            <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+              <Setter Property="Background" Value="#313244"/>
+            </Style>
+            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="#252535"/>
+            </Style>
+          </ListBox.Styles>
+
+          <!-- Status page -->
+          <ListBoxItem>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="◈" FontSize="15" VerticalAlignment="Center"/>
+              <TextBlock Text="Status" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
+          </ListBoxItem>
+
+          <!-- Devices page -->
+          <ListBoxItem>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="⋮" FontSize="15" VerticalAlignment="Center"/>
+              <TextBlock Text="Devices" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
+          </ListBoxItem>
+
+          <!-- Axis control page -->
+          <ListBoxItem>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="↕" FontSize="15" VerticalAlignment="Center"/>
+              <TextBlock Text="Axis" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
+          </ListBoxItem>
+        </ListBox>
+
+      </DockPanel>
+    </Border>
+
+    <!-- ── Content area ─────────────────────────────────────────────────── -->
+    <ContentControl Content="{Binding CurrentPage}"
+                    Background="#1E1E2E"/>
+
+  </DockPanel>
+</Window>
