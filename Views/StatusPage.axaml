@@ -1,0 +1,136 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LaserConsole.ViewModels"
+             x:Class="LaserConsole.Views.StatusPage"
+             x:DataType="vm:StatusPageViewModel"
+             Background="#1E1E2E"
+             FontFamily="Inter,Segoe UI,system-ui,sans-serif">
+
+  <DockPanel Margin="28,24,28,20">
+
+    <!-- ── Page title ────────────────────────────────────────────────────── -->
+    <TextBlock DockPanel.Dock="Top"
+               Text="STATUS &amp; CONTROL"
+               FontSize="11" FontWeight="SemiBold"
+               Foreground="#6C7086" LetterSpacing="1.5"
+               Margin="0,0,0,20"/>
+
+    <!-- ── Log panel (pinned to bottom) ─────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom"
+            Background="#181825"
+            CornerRadius="8"
+            BorderBrush="#313244" BorderThickness="1"
+            Height="220"
+            Margin="0,16,0,0">
+      <DockPanel Margin="12,10,12,10">
+        <TextBlock DockPanel.Dock="Top"
+                   Text="ACTIVITY LOG"
+                   FontSize="10" FontWeight="SemiBold"
+                   Foreground="#6C7086" LetterSpacing="1.2"
+                   Margin="0,0,0,8"/>
+        <ScrollViewer x:Name="LogScroll"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <ItemsControl x:Name="LogList" ItemsSource="{Binding Log}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}"
+                           FontFamily="Consolas,Cascadia Code,monospace"
+                           FontSize="12"
+                           Foreground="#A6ADC8"
+                           Margin="0,1"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <!-- ── Control cards ─────────────────────────────────────────────────── -->
+    <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto" Margin="0,0,0,0">
+
+      <!-- Laser status card -->
+      <Border Grid.Row="0" Grid.Column="0"
+              Background="#181825"
+              CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Margin="0,0,16,16"
+              Padding="18,16">
+        <StackPanel Spacing="12">
+          <TextBlock Text="LASER STATUS"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+          <StackPanel Spacing="8">
+            <TextBlock Text="Pilot" FontSize="12" Foreground="#6C7086"/>
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Ellipse Width="12" Height="12"
+                       Fill="{Binding PilotStatusBrush}"
+                       VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding PilotStatusText}"
+                         FontSize="22" FontWeight="Bold"
+                         Foreground="#CDD6F4"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Pilot control card -->
+      <Border Grid.Row="0" Grid.Column="1"
+              Background="#181825"
+              CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Margin="0,0,0,16"
+              Padding="18,16">
+        <StackPanel Spacing="16">
+          <TextBlock Text="PILOT CONTROL"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+
+          <!-- ON / OFF buttons -->
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="PILOT  ON"
+                    Command="{Binding PilotOnCommand}"
+                    FontSize="13" FontWeight="SemiBold"
+                    Padding="20,10"
+                    Background="#1E3A2E"
+                    Foreground="#A6E3A1"
+                    CornerRadius="6"/>
+            <Button Content="PILOT  OFF"
+                    Command="{Binding PilotOffCommand}"
+                    FontSize="13" FontWeight="SemiBold"
+                    Padding="20,10"
+                    Background="#3A1E22"
+                    Foreground="#F38BA8"
+                    CornerRadius="6"/>
+          </StackPanel>
+
+          <!-- Blink row -->
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <TextBlock Text="Blink for"
+                       FontSize="13" Foreground="#6C7086"
+                       VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding BlinkSeconds}"
+                           Minimum="1" Maximum="60" Increment="1"
+                           Width="80"
+                           FontSize="13"
+                           VerticalAlignment="Center"/>
+            <TextBlock Text="s"
+                       FontSize="13" Foreground="#6C7086"
+                       VerticalAlignment="Center"/>
+            <Button Content="BLINK"
+                    Command="{Binding BlinkCommand}"
+                    FontSize="13" FontWeight="SemiBold"
+                    Padding="16,10"
+                    Background="#2A2A45"
+                    Foreground="#89B4FA"
+                    CornerRadius="6"/>
+          </StackPanel>
+
+        </StackPanel>
+      </Border>
+
+    </Grid>
+
+  </DockPanel>
+</UserControl>

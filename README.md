@@ -1,80 +1,66 @@
-# RofinPilotTest
+# Rofin LaserConsole
 
-Minimal, dependency-free C# client that proves we can command the Rofin
-EasyMark E10 from our own code, by toggling the **pilot (alignment) laser**.
-It speaks raw GIOP 1.2 / CORBA over TCP — no Rofin DLLs, no ORB library — so
-it ports cleanly to Python later for the LightBurn pipeline.
+Cross-platform desktop client for the **Rofin EasyMark E10** laser marker,
+built with Avalonia UI (.NET 10). Speaks raw GIOP 1.2 / CORBA over TCP —
+no Rofin DLLs, no ORB library.
 
-## What it does (and deliberately does NOT do)
+## What it does
 
-It only writes the boolean attribute `pilotOn`. It never sends
-`ExecutePrimitives`, `SetLaserParameters`, `beamOn`, or starts a program, so
-**no marking beam is ever fired**. The pilot is the low-power visible pointer —
-a safe, instantly-visible proof that the control channel works end to end.
+- **Status & Control** — pilot laser on/off/blink with live state indicator
+- **Devices** — dynamic component tree (all 27 hardware nodes enumerated live
+  via `GetAllComponents`), per-component state/active/warning badges
+- **Axis Control** — live Z-axis position readout (polled at 500 ms), travel
+  bar between software limits, jog buttons (fast/slow up/down), stop, and
+  reference drive
 
-## The protocol it replays (all reconstructed from the captures)
+## Protocol
+
+All control is over the CORBA/GIOP 1.2 protocol reverse-engineered from
+Wireshark captures of the official LaserConsole client.
 
 ```
-TCP :10050  resolve(["Controller"])              -> LOCATION_FORWARD (status=3)
-                                                   -> Controller IOR @ host:49160
-TCP :49160  Controller.Login(user,hash,..)       -> SystemControl ref
-            SystemControl.GetMachineControl()    -> MachineControl ref
-            MachineControl.GetLaser()            -> Laser IOR
-            Laser.SetAttribute("pilotOn", any{boolean})
+TCP :10050  resolve("Controller")           → Controller IOR @ host:49160
+TCP :49160  Controller.Login(user, hash)    → SystemControl ref
+            SystemControl.GetMachineControl()  → MachineControl ref
+            MachineControl.GetLaser()          → PowerlineE ref
+            MachineControl.GetAxesControl()    → AxesControl ref
+            AxesControl.Jog(0, 2, direction)
+            AxesControl.ReferenceDrive()
+            PowerlineE.SetAttribute("pilotOn", any{boolean})
 ```
 
-Key facts baked in: GIOP 1.2 requests are big-endian; reply byte order is read
-per-message; CORBA strings include the trailing NUL while object keys do not;
-the `pilotOn` value rides in an `any` whose TypeCode is `tk_boolean` (8) followed
-by the boolean value (one octet) plus a padding byte (crucial for proper alignment).
-The naming service normally returns LOCATION_FORWARD (status=3), which the code
-handles by retrying with the forwarded object key. The `SetAttribute`, `Login`,
-`resolve`, and the full request framing were verified byte-for-byte against
-`WS-PilotOnOff` / `WS-LaserConsoleBoot`.
+## Documentation
 
-Object keys embed a per-boot instance GUID, so nothing is hardcoded — the Laser
-reference is discovered live via `GetLaser()` each run.
+| File | Contents |
+|---|---|
+| [docs/protocol.md](docs/protocol.md) | GIOP 1.2 wire format, message framing, CDR types, IOR encoding |
+| [docs/connection.md](docs/connection.md) | Full connection sequence, credentials, object lifetimes |
+| [docs/api-operations.md](docs/api-operations.md) | All known API operations with arguments, return types, confidence level |
+| [docs/components.md](docs/components.md) | All 27 component classes, hierarchy, state table |
+| [docs/attributes.md](docs/attributes.md) | Per-class attribute names, types, R/W access, known values |
 
 ## Build
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download). Runs on Windows 11 and macOS.
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```
-dotnet build -c Release
+dotnet build
+dotnet run
 ```
 
-## Run
+## Hardware
 
-```
-RofinPilotTest                 # default: pilot ON, hold 3s, OFF  (safe blink)
-RofinPilotTest on              # pilot ON and leave on
-RofinPilotTest off             # pilot OFF
-RofinPilotTest blink 5         # ON, hold 5s, OFF
-RofinPilotTest --host 192.168.0.200
-RofinPilotTest --no-login      # skip Login (pilot worked without it in capture)
-RofinPilotTest --giop10-naming # use GIOP 1.0 for resolve() if 1.2 is rejected
-```
+Default connection target: `192.168.0.200:10050`
+Configurable in the Connection panel at app startup.
 
-## If something fails
+## Notes
 
-- **resolve() fails** — the naming service may insist on GIOP 1.0. Add
-  `--giop10-naming` (or set `Config.NamingGiopMinor = 0`). This path is also
-  byte-exact against the capture.
-- **Login fails** — the captured `operator` hash is replayed verbatim. If the
-  controller uses a per-session challenge (the capture suggests it does not),
-  this would need the live challenge. Try `--no-login` first.
-- **SetAttribute returns status 2** (SYSTEM_EXCEPTION) — most likely the object
-  key wasn't found or write access was denied. In the capture the pilot needed
-  **no** `RefreshMasterAccess`, so this would point at a different controller
-  state (e.g. LaserConsole holding an exclusive lock — try with it closed).
-
-## Notes for the next steps
-
-- Same plumbing extends to the real goal: `GetProgramControl()` /
-  `GetMachineControl()` are already discoverable the same way, and
-  `ExecutePrimitives` / `SetLaserParameters` are just more CDR bodies — but those
-  fire the beam, so they belong behind the enclosure/interlock checks.
-- If you later want typed proxies for the larger surface instead of hand-rolled
-  CDR, the `ComponentsProxyCS.dll` you provided is IIOP.NET-based
-  (`rofin.com.ControllerComponents`); referencing it plus `IIOPChannel.dll`
-  would give you `Controller`/`Laser` stubs directly.
+- **Pilot laser only** — `SetAttribute("pilotOn", true)` uses the low-power
+  visible pointer. The marking beam (`beamOn`, `ExecutePrimitives`) is never
+  triggered by this client.
+- **Jog DOWN direction** — values `2` (slow) and `4` (fast) are inferred from
+  the observed UP pattern (1/3). They have not yet been verified with a
+  downward-jog capture.
+- **`Components.dll`** — the IIOP.NET proxy DLL from the official LaserConsole
+  install contains the full IDL type hierarchy and is useful for discovering
+  method signatures. Location: Google Drive → `Rofin Laser/bin/LaserConsole/`.
