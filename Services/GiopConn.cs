@@ -189,7 +189,12 @@ sealed class GiopConn : IDisposable
         => ReadIor(InvokeOk(machCtrlKey, "GetLaser", _ => { }));
 
     public void SetAttribute(byte[] key, string name, byte[] typeCodeBytes, byte[] valueBytes)
-        => InvokeOk(key, "SetAttribute", c => { c.Str(name); c.Raw(typeCodeBytes); c.Raw(valueBytes); });
+        => InvokeOk(key, "SetAttribute", c => {
+            c.Str(name);
+            c.Align(4);           // TypeCode is a CDR ULong and must be 4-byte aligned
+            c.Raw(typeCodeBytes);
+            c.Raw(valueBytes);
+        });
 
     // Returns null if the server doesn't support GetAttribute or the TypeCode is not tk_boolean.
     public bool? GetBoolAttribute(byte[] key, string name)
@@ -242,6 +247,18 @@ sealed class GiopConn : IDisposable
 
     public string GetComponentGenericName(byte[] key)
         => InvokeOk(key, "_get_genericName", _ => { }).Str();
+
+    public ObjRef GetIOControl(byte[] machCtrlKey)
+        => ReadIor(InvokeOk(machCtrlKey, "GetIOControl", _ => { }));
+
+    public ObjRef GetProgramControl(byte[] sysCtrlKey)
+        => ReadIor(InvokeOk(sysCtrlKey, "GetProgramControl", _ => { }));
+
+    public void Logout(byte[] key, uint flag)
+        => InvokeOk(key, "Logout", c => c.ULong(flag));
+
+    public void Shutdown(byte[] key)
+        => InvokeOk(key, "Shutdown", _ => { });
 
     // Axis control — verified from Rofin-AxisTest.pcapng
     public ObjRef GetAxesControl(byte[] machCtrlKey)

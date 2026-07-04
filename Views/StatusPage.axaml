@@ -20,7 +20,7 @@
             Background="#181825"
             CornerRadius="8"
             BorderBrush="#313244" BorderThickness="1"
-            Height="220"
+            Height="200"
             Margin="0,16,0,0">
       <DockPanel Margin="12,10,12,10">
         <TextBlock DockPanel.Dock="Top"
@@ -28,10 +28,9 @@
                    FontSize="10" FontWeight="SemiBold"
                    Foreground="#6C7086" LetterSpacing="1.2"
                    Margin="0,0,0,8"/>
-        <ScrollViewer x:Name="LogScroll"
-                      HorizontalScrollBarVisibility="Disabled"
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
-          <ItemsControl x:Name="LogList" ItemsSource="{Binding Log}">
+          <ItemsControl ItemsSource="{Binding Log}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <TextBlock Text="{Binding}"
@@ -47,148 +46,149 @@
     </Border>
 
     <!-- ── Control cards ─────────────────────────────────────────────────── -->
-    <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto" Margin="0,0,0,0">
+    <StackPanel Spacing="12">
 
-      <!-- Laser status card -->
-      <Border Grid.Row="0" Grid.Column="0"
-              Background="#181825"
-              CornerRadius="8"
-              BorderBrush="#313244" BorderThickness="1"
-              Margin="0,0,16,16"
-              Padding="18,16">
-        <StackPanel Spacing="12">
-          <TextBlock Text="LASER STATUS"
-                     FontSize="10" FontWeight="SemiBold"
-                     Foreground="#6C7086" LetterSpacing="1.2"/>
-          <StackPanel Spacing="8">
-            <TextBlock Text="Pilot" FontSize="12" Foreground="#6C7086"/>
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-              <Ellipse Width="12" Height="12"
-                       Fill="{Binding PilotStatusBrush}"
-                       VerticalAlignment="Center"/>
-              <TextBlock Text="{Binding PilotStatusText}"
-                         FontSize="22" FontWeight="Bold"
-                         Foreground="#CDD6F4"
-                         VerticalAlignment="Center"/>
+      <!-- Row 1: Pilot + Shutter -->
+      <Grid ColumnDefinitions="*,16,*">
+
+        <!-- PILOT card -->
+        <Border Grid.Column="0"
+                Background="#181825" CornerRadius="8"
+                BorderBrush="#313244" BorderThickness="1"
+                Padding="18,16">
+          <StackPanel Spacing="14">
+            <TextBlock Text="PILOT"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+
+            <!-- Toggle -->
+            <Button Command="{Binding PilotToggleCommand}"
+                    Background="{Binding PilotBg}"
+                    Foreground="{Binding PilotFg}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="16,11"
+                    FontSize="14" FontWeight="Bold"
+                    CornerRadius="6"
+                    Content="{Binding PilotLabel}"/>
+
+            <!-- Blink controls -->
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <TextBlock Text="Blink" FontSize="12" Foreground="#6C7086" VerticalAlignment="Center"/>
+              <NumericUpDown Value="{Binding BlinkSeconds}"
+                             Minimum="1" Maximum="60" Increment="1"
+                             Width="72" FontSize="12"
+                             VerticalAlignment="Center"/>
+              <TextBlock Text="s" FontSize="12" Foreground="#6C7086" VerticalAlignment="Center"/>
+              <Button Content="GO"
+                      Command="{Binding BlinkCommand}"
+                      FontSize="12" FontWeight="SemiBold"
+                      Padding="12,8"
+                      Background="#2A2A45"
+                      Foreground="#89B4FA"
+                      CornerRadius="6"/>
             </StackPanel>
           </StackPanel>
-        </StackPanel>
-      </Border>
+        </Border>
 
-      <!-- Pilot control card -->
-      <Border Grid.Row="0" Grid.Column="1"
-              Background="#181825"
-              CornerRadius="8"
+        <!-- SHUTTER card -->
+        <Border Grid.Column="2"
+                Background="#181825" CornerRadius="8"
+                BorderBrush="#313244" BorderThickness="1"
+                Padding="18,16">
+          <StackPanel Spacing="14">
+            <TextBlock Text="SHUTTER"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+
+            <Button Command="{Binding ShutterToggleCommand}"
+                    Background="{Binding ShutterBg}"
+                    Foreground="{Binding ShutterFg}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="16,11"
+                    FontSize="14" FontWeight="Bold"
+                    CornerRadius="6"
+                    Content="{Binding ShutterLabel}"/>
+          </StackPanel>
+        </Border>
+
+      </Grid>
+
+      <!-- Row 2: Focus Finder + Lamp Test -->
+      <Grid ColumnDefinitions="*,16,*">
+
+        <!-- FOCUS FINDER card -->
+        <Border Grid.Column="0"
+                Background="#181825" CornerRadius="8"
+                BorderBrush="#313244" BorderThickness="1"
+                Padding="18,16">
+          <StackPanel Spacing="14">
+            <TextBlock Text="FOCUS FINDER"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+
+            <Button Command="{Binding FocusToggleCommand}"
+                    Background="{Binding FocusBg}"
+                    Foreground="{Binding FocusFg}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="16,11"
+                    FontSize="14" FontWeight="Bold"
+                    CornerRadius="6"
+                    Content="{Binding FocusLabel}"/>
+          </StackPanel>
+        </Border>
+
+        <!-- LAMP TEST card -->
+        <Border Grid.Column="2"
+                Background="#181825" CornerRadius="8"
+                BorderBrush="#313244" BorderThickness="1"
+                Padding="18,16">
+          <StackPanel Spacing="14">
+            <TextBlock Text="LAMP TEST"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+
+            <Button Command="{Binding LampToggleCommand}"
+                    Background="{Binding LampBg}"
+                    Foreground="{Binding LampFg}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="16,11"
+                    FontSize="14" FontWeight="Bold"
+                    CornerRadius="6"
+                    Content="{Binding LampLabel}"/>
+          </StackPanel>
+        </Border>
+
+      </Grid>
+
+      <!-- Shutdown -->
+      <Border Background="#181825" CornerRadius="8"
               BorderBrush="#313244" BorderThickness="1"
-              Margin="0,0,0,16"
-              Padding="18,16">
-        <StackPanel Spacing="16">
-          <TextBlock Text="PILOT CONTROL"
-                     FontSize="10" FontWeight="SemiBold"
-                     Foreground="#6C7086" LetterSpacing="1.2"/>
-
-          <!-- ON / OFF buttons -->
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Content="PILOT  ON"
-                    Command="{Binding PilotOnCommand}"
-                    FontSize="13" FontWeight="SemiBold"
-                    Padding="20,10"
-                    Background="#1E3A2E"
-                    Foreground="#A6E3A1"
-                    CornerRadius="6"/>
-            <Button Content="PILOT  OFF"
-                    Command="{Binding PilotOffCommand}"
-                    FontSize="13" FontWeight="SemiBold"
-                    Padding="20,10"
-                    Background="#3A1E22"
-                    Foreground="#F38BA8"
-                    CornerRadius="6"/>
+              Padding="18,14">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="SHUTDOWN"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+            <TextBlock Text="Powers off the controller hardware"
+                       FontSize="11" Foreground="#45475A"
+                       Margin="0,3,0,0"/>
           </StackPanel>
-
-          <!-- Blink row -->
-          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-            <TextBlock Text="Blink for"
-                       FontSize="13" Foreground="#6C7086"
-                       VerticalAlignment="Center"/>
-            <NumericUpDown Value="{Binding BlinkSeconds}"
-                           Minimum="1" Maximum="60" Increment="1"
-                           Width="80"
-                           FontSize="13"
-                           VerticalAlignment="Center"/>
-            <TextBlock Text="s"
-                       FontSize="13" Foreground="#6C7086"
-                       VerticalAlignment="Center"/>
-            <Button Content="BLINK"
-                    Command="{Binding BlinkCommand}"
-                    FontSize="13" FontWeight="SemiBold"
-                    Padding="16,10"
-                    Background="#2A2A45"
-                    Foreground="#89B4FA"
-                    CornerRadius="6"/>
-          </StackPanel>
-
-        </StackPanel>
+          <Button Grid.Column="1"
+                  Content="SHUTDOWN"
+                  Command="{Binding ShutdownCommand}"
+                  FontSize="13" FontWeight="SemiBold"
+                  Padding="20,10"
+                  Background="#3A1E22"
+                  Foreground="#F38BA8"
+                  CornerRadius="6"/>
+        </Grid>
       </Border>
 
-      <!-- Focus finder status card -->
-      <Border Grid.Row="1" Grid.Column="0"
-              Background="#181825"
-              CornerRadius="8"
-              BorderBrush="#313244" BorderThickness="1"
-              Margin="0,0,16,16"
-              Padding="18,16">
-        <StackPanel Spacing="12">
-          <TextBlock Text="FOCUS FINDER"
-                     FontSize="10" FontWeight="SemiBold"
-                     Foreground="#6C7086" LetterSpacing="1.2"/>
-          <StackPanel Spacing="8">
-            <TextBlock Text="State" FontSize="12" Foreground="#6C7086"/>
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-              <Ellipse Width="12" Height="12"
-                       Fill="{Binding FocusFinderStatusBrush}"
-                       VerticalAlignment="Center"/>
-              <TextBlock Text="{Binding FocusFinderStatusText}"
-                         FontSize="22" FontWeight="Bold"
-                         Foreground="#CDD6F4"
-                         VerticalAlignment="Center"/>
-            </StackPanel>
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
-      <!-- Focus finder control card -->
-      <Border Grid.Row="1" Grid.Column="1"
-              Background="#181825"
-              CornerRadius="8"
-              BorderBrush="#313244" BorderThickness="1"
-              Margin="0,0,0,16"
-              Padding="18,16">
-        <StackPanel Spacing="16">
-          <TextBlock Text="FOCUS FINDER CONTROL"
-                     FontSize="10" FontWeight="SemiBold"
-                     Foreground="#6C7086" LetterSpacing="1.2"/>
-
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Button Content="FOCUS FIND  ON"
-                    Command="{Binding FocusOnCommand}"
-                    FontSize="13" FontWeight="SemiBold"
-                    Padding="20,10"
-                    Background="#2A1E3A"
-                    Foreground="#CBA6F7"
-                    CornerRadius="6"/>
-            <Button Content="FOCUS FIND  OFF"
-                    Command="{Binding FocusOffCommand}"
-                    FontSize="13" FontWeight="SemiBold"
-                    Padding="20,10"
-                    Background="#3A1E22"
-                    Foreground="#F38BA8"
-                    CornerRadius="6"/>
-          </StackPanel>
-
-        </StackPanel>
-      </Border>
-
-    </Grid>
+    </StackPanel>
 
   </DockPanel>
 </UserControl>

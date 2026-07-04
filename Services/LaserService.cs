@@ -31,6 +31,8 @@ public sealed class LaserService : IDisposable
     public bool    IsConnected       { get; private set; }
     public bool?   PilotState        { get; private set; }
     public bool?   FocusFinderState  { get; private set; }
+    public bool?   ShutterState      { get; private set; }
+    public bool?   LampTestState     { get; private set; }
     public double? AxisPosition      { get; private set; }
 
     GiopConn? _conn;
@@ -133,6 +135,8 @@ public sealed class LaserService : IDisposable
         // Best-effort initial reads — ignore failures.
         await RefreshPilotStateAsync(ct);
         await RefreshFocusFinderStateAsync(ct);
+        await RefreshShutterStateAsync(ct);
+        await RefreshLampTestStateAsync(ct);
     }
 
     public async Task RefreshPilotStateAsync(CancellationToken ct = default)
@@ -199,6 +203,8 @@ public sealed class LaserService : IDisposable
         IsConnected      = false;
         PilotState       = null;
         FocusFinderState = null;
+        ShutterState     = null;
+        LampTestState    = null;
         AxisPosition     = null;
         Log("Disconnected.");
         StateChanged?.Invoke();
@@ -242,6 +248,106 @@ public sealed class LaserService : IDisposable
             FocusFinderState = on;
             Log($"    focus finder is {(on ? "ON" : "OFF")}.");
             StateChanged?.Invoke();
+        }
+        finally { _lock.Release(); }
+    }
+
+    public async Task RefreshShutterStateAsync(CancellationToken ct = default)
+    {
+        if (!IsConnected || _conn is null || _laser is null) return;
+        if (!await _lock.WaitAsync(50, ct)) return;
+        try
+        {
+            if (!IsConnected || _conn is null || _laser is null) return;
+            var conn = _conn; var laser = _laser;
+            ShutterState = await Task.Run(() =>
+            {
+                try { return conn.GetBoolAttribute(laser.Key, "shutterOpen"); }
+                catch (Exception ex) { Log($"    shutter state read failed: {ex.Message}"); return (bool?)null; }
+            }, ct);
+            StateChanged?.Invoke();
+        }
+        finally { _lock.Release(); }
+    }
+
+    public async Task SetShutterAsync(bool on, CancellationToken ct = default)
+    {
+        EnsureConnected();
+        await _lock.WaitAsync(ct);
+        try
+        {
+            Log($"    shutterOpen = {(on ? "TRUE" : "FALSE")}");
+            var conn = _conn!; var key = _laser!.Key;
+            await Task.Run(() =>
+                conn.SetAttribute(key, "shutterOpen",
+                    new byte[] { 0x00, 0x00, 0x00, 0x08 },
+                    new byte[] { (byte)(on ? 1 : 0), 0x00 }), ct);
+            ShutterState = on;
+            Log($"    shutter is {(on ? "OPEN" : "CLOSED")}.");
+            StateChanged?.Invoke();
+        }
+        finally { _lock.Release(); }
+    }
+
+    public async Task RefreshLampTestStateAsync(CancellationToken ct = default)
+    {
+        if (!IsConnected || _conn is null || _laser is null) return;
+        if (!await _lock.WaitAsync(50, ct)) return;
+        try
+        {
+            if (!IsConnected || _conn is null || _laser is null) return;
+            var conn = _conn; var laser = _laser;
+            LampTestState = await Task.Run(() =>
+            {
+                try { return conn.GetBoolAttribute(laser.Key, "lampTestOn"); }
+                catch (Exception ex) { Log($"    lamp test state read failed: {ex.Message}"); return (bool?)null; }
+            }, ct);
+            StateChanged?.Invoke();
+        }
+        finally { _lock.Release(); }
+    }
+
+    public async Task SetLampTestAsync(bool on, CancellationToken ct = default)
+    {
+        EnsureConnected();
+        await _lock.WaitAsync(ct);
+        try
+        {
+            Log($"    lampTestOn = {(on ? "TRUE" : "FALSE")}");
+            var conn = _conn!; var key = _laser!.Key;
+            await Task.Run(() =>
+                conn.SetAttribute(key, "lampTestOn",
+                    new byte[] { 0x00, 0x00, 0x00, 0x08 },
+                    new byte[] { (byte)(on ? 1 : 0), 0x00 }), ct);
+            LampTestState = on;
+            Log($"    lamp test is {(on ? "ON" : "OFF")}.");
+            StateChanged?.Invoke();
+        }
+        finally { _lock.Release(); }
+    }
+
+    public async Task ShutdownAsync(CancellationToken ct = default)
+    {
+        EnsureConnected();
+        await _lock.WaitAsync(ct);
+        try
+        {
+            Log("Shutdown: sending Logout(1) + Shutdown...");
+            var conn   = _conn!;
+            var sysKey = _sysControl!.Key;
+            await Task.Run(() =>
+            {
+                conn.Logout(sysKey, 1);
+                conn.Shutdown(sysKey);
+            }, ct);
+            Log("Shutdown command sent. Disconnecting.");
+            DisconnectLocked();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log($"    Shutdown error: {ex.Message}");
+            // Force disconnect regardless — controller may stop responding
+            DisconnectLocked();
         }
         finally { _lock.Release(); }
     }

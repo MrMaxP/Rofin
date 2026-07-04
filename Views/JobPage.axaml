@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LaserConsole.ViewModels"
+             x:Class="LaserConsole.Views.JobPage"
+             x:DataType="vm:JobPageViewModel"
+             Background="#1E1E2E"
+             FontFamily="Inter,Segoe UI,system-ui,sans-serif">
+
+  <DockPanel Margin="28,24,28,20">
+
+    <!-- ── Page title ───────────────────────────────────────────────────── -->
+    <TextBlock DockPanel.Dock="Top"
+               Text="JOB / GCODE"
+               FontSize="11" FontWeight="SemiBold"
+               Foreground="#6C7086" LetterSpacing="1.5"
+               Margin="0,0,0,20"/>
+
+    <!-- ── Log (bottom) ─────────────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom"
+            Background="#181825" CornerRadius="8"
+            BorderBrush="#313244" BorderThickness="1"
+            Margin="0,12,0,0">
+      <DockPanel Margin="12,10,12,10">
+        <TextBlock DockPanel.Dock="Top"
+                   Text="GCODE LOG"
+                   FontSize="10" FontWeight="SemiBold"
+                   Foreground="#6C7086" LetterSpacing="1.2"
+                   Margin="0,0,0,8"/>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding Log}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}"
+                           FontFamily="Consolas,Cascadia Code,monospace"
+                           FontSize="12" Foreground="#A6ADC8"
+                           Margin="0,1"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <!-- ── Top cards ────────────────────────────────────────────────────── -->
+    <StackPanel Spacing="12">
+
+      <!-- GCode server card -->
+      <Border Background="#181825" CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Padding="18,16">
+        <Grid ColumnDefinitions="*,16,Auto,8,Auto">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="GCODE SERVER"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+            <TextBlock FontSize="11" Foreground="#45475A" Margin="0,4,0,0">
+              <TextBlock.Text>
+                <MultiBinding StringFormat="Listening on TCP port {0} — connect Lightburn via GRBL">
+                  <Binding Path="Port"/>
+                </MultiBinding>
+              </TextBlock.Text>
+            </TextBlock>
+          </StackPanel>
+
+          <!-- Port input -->
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="Port" FontSize="12" Foreground="#6C7086" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding Port}"
+                           Minimum="1024" Maximum="65535" Increment="1"
+                           Width="90" FontSize="12"
+                           IsEnabled="{Binding !ServerRunning}"
+                           VerticalAlignment="Center"/>
+          </StackPanel>
+
+          <!-- Start / Stop button -->
+          <Button Grid.Column="4"
+                  Content="{Binding ServerToggleLabel}"
+                  Command="{Binding ToggleServerCommand}"
+                  Background="{Binding ServerToggleBg}"
+                  Foreground="{Binding ServerToggleFg}"
+                  FontSize="13" FontWeight="SemiBold"
+                  Padding="18,10" CornerRadius="6"
+                  VerticalAlignment="Center"/>
+        </Grid>
+      </Border>
+
+      <!-- Job status card -->
+      <Border Background="#181825" CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Padding="18,16">
+        <Grid ColumnDefinitions="Auto,12,*">
+          <Ellipse Width="12" Height="12"
+                   Fill="{Binding JobStatusBrush}"
+                   VerticalAlignment="Center"/>
+          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+            <TextBlock Text="JOB STATUS"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#6C7086" LetterSpacing="1.2"/>
+            <TextBlock Text="{Binding JobStatusText}"
+                       FontSize="14" Foreground="#CDD6F4"
+                       Margin="0,4,0,0"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Lightburn setup note -->
+      <Border Background="#1A1A2E" CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Padding="18,14">
+        <StackPanel Spacing="6">
+          <TextBlock Text="LIGHTBURN SETUP"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+          <TextBlock FontSize="12" Foreground="#A6ADC8" TextWrapping="Wrap">
+            In Lightburn: Devices → Add → GRBL → choose "Create manually" →
+            set connection to "Serial/USB" or "TCP" → host 127.0.0.1 and the port above.
+            X/Y marking requires ExecutePrimitives decoding (in progress).
+            Z axis and laser on/off are implemented.
+          </TextBlock>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+
+  </DockPanel>
+</UserControl>

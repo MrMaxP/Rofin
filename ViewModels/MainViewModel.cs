@@ -18,6 +18,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public StatusPageViewModel  StatusPageVM  { get; }
     public DevicesPageViewModel DevicesPageVM { get; }
     public AxisPageViewModel    AxisPageVM    { get; }
+    public JobPageViewModel     JobPageVM     { get; }
 
     public System.Windows.Input.ICommand ConnectCommand    => _connectCmd;
     public System.Windows.Input.ICommand DisconnectCommand => _disconnectCmd;
@@ -43,6 +44,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         1 => (object)DevicesPageVM,
         2 => AxisPageVM,
+        3 => JobPageVM,
         _ => StatusPageVM,
     };
 
@@ -79,6 +81,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         StatusPageVM  = new StatusPageViewModel(_service);
         DevicesPageVM = new DevicesPageViewModel(_service);
         AxisPageVM    = new AxisPageViewModel(_service);
+        JobPageVM     = new JobPageViewModel(_service);
 
         _connectCmd = new AsyncRelayCommand(
             ConnectAsync,
@@ -151,6 +154,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _clockTimer.Stop();
+        JobPageVM.Dispose();
         _service.Dispose();
     }
 }
