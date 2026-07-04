@@ -105,23 +105,25 @@
                      Foreground="#6C7086" LetterSpacing="1.2"/>
 
           <!-- Direction header -->
-          <Grid ColumnDefinitions="*,80,*">
+          <Grid ColumnDefinitions="*,*">
             <TextBlock Grid.Column="0"
                        Text="▼ BED DOWN (away from laser)"
                        FontSize="12" Foreground="#89B4FA"
                        HorizontalAlignment="Center"/>
-            <TextBlock Grid.Column="2"
+            <TextBlock Grid.Column="1"
                        Text="▲ BED UP (toward laser)"
                        FontSize="12" Foreground="#A6E3A1"
                        HorizontalAlignment="Center"/>
           </Grid>
 
-          <!-- Jog button row -->
-          <Grid ColumnDefinitions="*,*,80,*,*" RowDefinitions="Auto,Auto">
+          <!-- Jog button row: Tag carries the direction constant sent on press -->
+          <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto">
 
             <!-- Fast down -->
             <Button Grid.Row="0" Grid.Column="0"
-                    Command="{Binding FastDownCommand}"
+                    Tag="4"
+                    PointerPressed="OnJogPointerPressed"
+                    PointerReleased="OnJogPointerReleased"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
                     Margin="0,0,5,0" Padding="0,18"
@@ -133,7 +135,9 @@
 
             <!-- Slow down -->
             <Button Grid.Row="0" Grid.Column="1"
-                    Command="{Binding SlowDownCommand}"
+                    Tag="2"
+                    PointerPressed="OnJogPointerPressed"
+                    PointerReleased="OnJogPointerReleased"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
                     Margin="0,0,5,0" Padding="0,18"
@@ -143,21 +147,11 @@
                     CornerRadius="6"
                     Content="▼"/>
 
-            <!-- STOP centre -->
-            <Button Grid.Row="0" Grid.Column="2"
-                    Command="{Binding StopCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Padding="0,18"
-                    FontSize="13" FontWeight="Bold"
-                    Background="#3A1E22"
-                    Foreground="#F38BA8"
-                    CornerRadius="6"
-                    Content="■ STOP"/>
-
             <!-- Slow up -->
-            <Button Grid.Row="0" Grid.Column="3"
-                    Command="{Binding SlowUpCommand}"
+            <Button Grid.Row="0" Grid.Column="2"
+                    Tag="1"
+                    PointerPressed="OnJogPointerPressed"
+                    PointerReleased="OnJogPointerReleased"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
                     Margin="5,0,0,0" Padding="0,18"
@@ -168,8 +162,10 @@
                     Content="▲"/>
 
             <!-- Fast up -->
-            <Button Grid.Row="0" Grid.Column="4"
-                    Command="{Binding FastUpCommand}"
+            <Button Grid.Row="0" Grid.Column="3"
+                    Tag="3"
+                    PointerPressed="OnJogPointerPressed"
+                    PointerReleased="OnJogPointerReleased"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
                     Margin="5,0,0,0" Padding="0,18"
@@ -186,15 +182,15 @@
             <TextBlock Grid.Row="1" Grid.Column="1"
                        Text="SLOW" FontSize="10" Foreground="#45475A"
                        HorizontalAlignment="Center" Margin="0,6,0,0"/>
-            <TextBlock Grid.Row="1" Grid.Column="3"
+            <TextBlock Grid.Row="1" Grid.Column="2"
                        Text="SLOW" FontSize="10" Foreground="#45475A"
                        HorizontalAlignment="Center" Margin="0,6,0,0"/>
-            <TextBlock Grid.Row="1" Grid.Column="4"
+            <TextBlock Grid.Row="1" Grid.Column="3"
                        Text="FAST" FontSize="10" Foreground="#45475A"
                        HorizontalAlignment="Center" Margin="0,6,0,0"/>
           </Grid>
 
-          <TextBlock Text="Click to start jogging. Click  ■ STOP  to halt the axis."
+          <TextBlock Text="Hold to jog. Release to stop."
                      FontSize="11" Foreground="#45475A"
                      HorizontalAlignment="Center"/>
 

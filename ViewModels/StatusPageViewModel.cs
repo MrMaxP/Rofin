@@ -16,12 +16,16 @@ public sealed class StatusPageViewModel : ViewModelBase
     readonly AsyncRelayCommand _pilotOnCmd;
     readonly AsyncRelayCommand _pilotOffCmd;
     readonly AsyncRelayCommand _blinkCmd;
+    readonly AsyncRelayCommand _focusOnCmd;
+    readonly AsyncRelayCommand _focusOffCmd;
 
     public ObservableCollection<string> Log { get; } = new();
 
-    public System.Windows.Input.ICommand PilotOnCommand  => _pilotOnCmd;
-    public System.Windows.Input.ICommand PilotOffCommand => _pilotOffCmd;
-    public System.Windows.Input.ICommand BlinkCommand    => _blinkCmd;
+    public System.Windows.Input.ICommand PilotOnCommand   => _pilotOnCmd;
+    public System.Windows.Input.ICommand PilotOffCommand  => _pilotOffCmd;
+    public System.Windows.Input.ICommand BlinkCommand     => _blinkCmd;
+    public System.Windows.Input.ICommand FocusOnCommand   => _focusOnCmd;
+    public System.Windows.Input.ICommand FocusOffCommand  => _focusOffCmd;
 
     decimal _blinkSeconds = 3;
     public decimal BlinkSeconds
@@ -46,6 +50,20 @@ public sealed class StatusPageViewModel : ViewModelBase
         null  => new SolidColorBrush(Color.Parse("#45475A")),
     };
 
+    public string FocusFinderStatusText => _service.FocusFinderState switch
+    {
+        true  => "ON",
+        false => "OFF",
+        null  => "Unknown",
+    };
+
+    public IBrush FocusFinderStatusBrush => _service.FocusFinderState switch
+    {
+        true  => new SolidColorBrush(Color.Parse("#CBA6F7")),
+        false => new SolidColorBrush(Color.Parse("#6C7086")),
+        null  => new SolidColorBrush(Color.Parse("#45475A")),
+    };
+
     public StatusPageViewModel(LaserService service)
     {
         _service = service;
@@ -60,6 +78,14 @@ public sealed class StatusPageViewModel : ViewModelBase
 
         _blinkCmd = new AsyncRelayCommand(
             () => RunOperation(() => service.BlinkAsync((int)BlinkSeconds)),
+            () => service.IsConnected && !_busy);
+
+        _focusOnCmd = new AsyncRelayCommand(
+            () => RunOperation(() => service.SetFocusFinderAsync(true)),
+            () => service.IsConnected && !_busy);
+
+        _focusOffCmd = new AsyncRelayCommand(
+            () => RunOperation(() => service.SetFocusFinderAsync(false)),
             () => service.IsConnected && !_busy);
 
         service.LogMessage  += msg   => Dispatcher.UIThread.Post(() => AddLog(msg));
@@ -87,6 +113,8 @@ public sealed class StatusPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsConnected));
         OnPropertyChanged(nameof(PilotStatusText));
         OnPropertyChanged(nameof(PilotStatusBrush));
+        OnPropertyChanged(nameof(FocusFinderStatusText));
+        OnPropertyChanged(nameof(FocusFinderStatusBrush));
         RaiseAllCommands();
     }
 
@@ -95,5 +123,7 @@ public sealed class StatusPageViewModel : ViewModelBase
         _pilotOnCmd.Raise();
         _pilotOffCmd.Raise();
         _blinkCmd.Raise();
+        _focusOnCmd.Raise();
+        _focusOffCmd.Raise();
     }
 }

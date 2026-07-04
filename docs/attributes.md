@@ -29,9 +29,11 @@ The laser source object. `GetLaser()` on MachineControl returns this.
 | `state` | 3 | long | R | Universal |
 | `active` | 8 | bool | R | Universal |
 | `isWarning` | 8 | bool | R | Universal |
-| `pilotOn` | 8 | bool | **R/W** | Alignment laser — **confirmed writable** ✅ |
+| `pilotOn`        | 8 | bool | **R/W** | Alignment laser — **confirmed writable** ✅ |
+| `focusFinderOn`  | 8 | bool | **R/W** | Focus-finding mode — **confirmed writable** ✅ (ws-focusfind.pcapng) |
+| `shutterOpen`    | 8 | bool | **R/W** | Physical shutter — **confirmed writable** ✅ (ws-closeshutter.pcapng) |
+| `lampTestOn`     | 8 | bool | **R/W** | Lamp test mode — **confirmed writable** ✅ (ws-lamptest.pcapng) |
 | `beamOn` | 8 | bool | R | Main beam active |
-| `shutterOpen` | 8 | bool | R | Physical shutter state |
 | `actLaserPower` | 7 | double | R | Actual laser power (unit unknown, likely W or %) |
 | `actTemperature` | 7 | double | R | Laser head temperature (°C) |
 | `cwAllowed` | 8 | bool | R | Continuous-wave operation permitted |
@@ -39,12 +41,14 @@ The laser source object. `GetLaser()` on MachineControl returns this.
 
 All 47 attributes are listed in `PowerlineE._get_classInfo()` XML.
 
-**Writing `pilotOn`:**
+**Writing boolean attributes:**
 
 ```
 SetAttribute("pilotOn",
     typeCode = [0x00, 0x00, 0x00, 0x08],   // tk_boolean
     value    = [0x01, 0x00])                // true + alignment byte
+
+// Same pattern applies to focusFinderOn, shutterOpen, lampTestOn
 ```
 
 ---
@@ -56,6 +60,7 @@ SetAttribute("pilotOn",
 | `state` | 3 | long | Universal |
 | `active` | 8 | bool | Universal |
 | `actTemperature` | 7 | double | Power supply temperature (°C) |
+| `opHoursPowersupply` | 7 | double | Cumulative power-supply operating hours |
 
 ---
 
@@ -106,6 +111,8 @@ Position is unreliable until referenced after power-on.
 |---|---|---|---|
 | `state` | 3 | long | Universal |
 | `active` | 8 | bool | Universal |
+| `opHourLaser` | 7 | double | Cumulative laser operating hours |
+| `opHourSystem` | 7 | double | Cumulative system operating hours |
 
 ---
 
@@ -125,6 +132,27 @@ not been decoded (scan head control is not yet implemented).
 
 Both are `suspended` / `active=false` on this machine configuration. No
 additional attributes have been read.
+
+---
+
+## GalvoControl (MarkControl)
+
+Object obtained from ProgramControl or MachineControl (exact accessor not yet decoded).
+Manages scan head commands and laser marking parameters.
+
+| Attribute | TypeCode | Type | Notes |
+|---|---|---|---|
+| `resetStopInDriver` | 8 | bool | **R/W** | Clear stop-in-driver flag before marking. Set to `true` before `SignalProgramLoaded`. |
+
+---
+
+## ProgramControl
+
+Object returned by `GetProgramControl()` on SystemControl.
+
+| Attribute | TypeCode | Type | Notes |
+|---|---|---|---|
+| `prcServerState` | — | — | Server state enum (TypeCode not yet decoded) |
 
 ---
 

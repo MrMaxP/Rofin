@@ -17,6 +17,8 @@ sealed class GiopConn : IDisposable
     {
         _tcp = new TcpClient { NoDelay = true };
         _tcp.Connect(host, port);
+        _tcp.ReceiveTimeout = 5000;
+        _tcp.SendTimeout    = 2000;
         _s = _tcp.GetStream();
     }
 
@@ -120,6 +122,12 @@ sealed class GiopConn : IDisposable
     CdrR InvokeOk(byte[] objKey, string op, Action<Cdr> writeArgs, int minor = 2)
     {
         var (st, body) = Invoke(objKey, op, writeArgs, minor);
+        if (st == 1)
+        {
+            try   { throw new ApplicationException($"{op}: USER_EXCEPTION {body.Str()}"); }
+            catch (ApplicationException) { throw; }
+            catch (Exception ex) { throw new ApplicationException($"{op}: USER_EXCEPTION (parse failed: {ex.Message})"); }
+        }
         if (st == 2)
         {
             try
@@ -239,11 +247,12 @@ sealed class GiopConn : IDisposable
     public ObjRef GetAxesControl(byte[] machCtrlKey)
         => ReadIor(InvokeOk(machCtrlKey, "GetAxesControl", _ => { }));
 
-    // args (0, 2, direction) are the exact wire values from the capture.
-    // direction: 0=STOP, 1=neg_slow (bed up slow), 3=neg_fast (bed up fast)
-    //            2=pos_slow (bed down slow, inferred), 4=pos_fast (bed down fast, inferred)
+    // Jog(axis, direction) — 2 args confirmed from Rofin-AxisTest.pcapng.
+    // axis=2 is the LIF axis index within AxesControl (constant).
+    // direction: 0=STOP, 1=slow_up (bed toward laser), 3=fast_up
+    //            2=slow_down (inferred), 4=fast_down (inferred)
     public void Jog(byte[] axesCtrlKey, uint direction)
-        => InvokeOk(axesCtrlKey, "Jog", c => { c.ULong(0); c.ULong(2); c.ULong(direction); });
+        => InvokeOk(axesCtrlKey, "Jog", c => { c.ULong(2); c.ULong(direction); });
 
     public void ReferenceDrive(byte[] axesCtrlKey)
         => InvokeOk(axesCtrlKey, "ReferenceDrive", _ => { });

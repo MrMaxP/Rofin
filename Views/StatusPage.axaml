@@ -130,6 +130,64 @@
         </StackPanel>
       </Border>
 
+      <!-- Focus finder status card -->
+      <Border Grid.Row="1" Grid.Column="0"
+              Background="#181825"
+              CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Margin="0,0,16,16"
+              Padding="18,16">
+        <StackPanel Spacing="12">
+          <TextBlock Text="FOCUS FINDER"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+          <StackPanel Spacing="8">
+            <TextBlock Text="State" FontSize="12" Foreground="#6C7086"/>
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <Ellipse Width="12" Height="12"
+                       Fill="{Binding FocusFinderStatusBrush}"
+                       VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding FocusFinderStatusText}"
+                         FontSize="22" FontWeight="Bold"
+                         Foreground="#CDD6F4"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Focus finder control card -->
+      <Border Grid.Row="1" Grid.Column="1"
+              Background="#181825"
+              CornerRadius="8"
+              BorderBrush="#313244" BorderThickness="1"
+              Margin="0,0,0,16"
+              Padding="18,16">
+        <StackPanel Spacing="16">
+          <TextBlock Text="FOCUS FINDER CONTROL"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#6C7086" LetterSpacing="1.2"/>
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="FOCUS FIND  ON"
+                    Command="{Binding FocusOnCommand}"
+                    FontSize="13" FontWeight="SemiBold"
+                    Padding="20,10"
+                    Background="#2A1E3A"
+                    Foreground="#CBA6F7"
+                    CornerRadius="6"/>
+            <Button Content="FOCUS FIND  OFF"
+                    Command="{Binding FocusOffCommand}"
+                    FontSize="13" FontWeight="SemiBold"
+                    Padding="20,10"
+                    Background="#3A1E22"
+                    Foreground="#F38BA8"
+                    CornerRadius="6"/>
+          </StackPanel>
+
+        </StackPanel>
+      </Border>
+
     </Grid>
 
   </DockPanel>

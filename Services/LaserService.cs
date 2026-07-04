@@ -28,9 +28,10 @@ public sealed class LaserService : IDisposable
 
     public ConnectionSettings Settings { get; } = new();
 
-    public bool    IsConnected  { get; private set; }
-    public bool?   PilotState   { get; private set; }
-    public double? AxisPosition { get; private set; }
+    public bool    IsConnected       { get; private set; }
+    public bool?   PilotState        { get; private set; }
+    public bool?   FocusFinderState  { get; private set; }
+    public double? AxisPosition      { get; private set; }
 
     GiopConn? _conn;
     ObjRef?   _controller;
@@ -41,7 +42,11 @@ public sealed class LaserService : IDisposable
 
     readonly SemaphoreSlim _lock = new(1, 1);
 
-    void Log(string msg) => LogMessage?.Invoke(msg);
+    void Log(string msg)
+    {
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] {msg}");
+        LogMessage?.Invoke(msg);
+    }
 
     // ── Connect ────────────────────────────────────────────────────────────
 
@@ -109,8 +114,9 @@ public sealed class LaserService : IDisposable
                 catch (Exception ex) { Log($"    LIFAxis search failed: {ex.Message}"); }
             }, ct);
 
-            IsConnected = true;
-            PilotState  = null;
+            IsConnected      = true;
+            PilotState       = null;
+            FocusFinderState = null;
             Log("Connected.");
             StateChanged?.Invoke();
         }
@@ -124,8 +130,9 @@ public sealed class LaserService : IDisposable
             _lock.Release();
         }
 
-        // Best-effort initial read of pilot state — ignore failures.
+        // Best-effort initial reads — ignore failures.
         await RefreshPilotStateAsync(ct);
+        await RefreshFocusFinderStateAsync(ct);
     }
 
     public async Task RefreshPilotStateAsync(CancellationToken ct = default)
@@ -148,10 +155,33 @@ public sealed class LaserService : IDisposable
         finally { _lock.Release(); }
     }
 
+    public async Task RefreshFocusFinderStateAsync(CancellationToken ct = default)
+    {
+        if (!IsConnected || _conn is null || _laser is null) return;
+        await _lock.WaitAsync(ct);
+        try
+        {
+            if (!IsConnected || _conn is null || _laser is null) return;
+            var conn  = _conn;
+            var laser = _laser;
+            var state = await Task.Run(() =>
+            {
+                try { return conn.GetBoolAttribute(laser.Key, "focusFinderOn"); }
+                catch (Exception ex) { Log($"    focus finder state read failed: {ex.Message}"); return (bool?)null; }
+            }, ct);
+            FocusFinderState = state;
+            StateChanged?.Invoke();
+        }
+        finally { _lock.Release(); }
+    }
+
     // ── Disconnect ─────────────────────────────────────────────────────────
 
     public void Disconnect()
     {
+        // Close the socket first so any in-flight ReadFully() throws immediately,
+        // releasing the lock. Without this, _lock.Wait() blocks forever.
+        _conn?.Dispose();
         _lock.Wait();
         try { DisconnectLocked(); }
         finally { _lock.Release(); }
@@ -166,9 +196,10 @@ public sealed class LaserService : IDisposable
         _machControl = null;
         _laser       = null;
         _lifAxisKey  = null;
-        IsConnected  = false;
-        PilotState   = null;
-        AxisPosition = null;
+        IsConnected      = false;
+        PilotState       = null;
+        FocusFinderState = null;
+        AxisPosition     = null;
         Log("Disconnected.");
         StateChanged?.Invoke();
     }
@@ -190,6 +221,26 @@ public sealed class LaserService : IDisposable
                     new byte[] { (byte)(on ? 1 : 0), 0x00 }), ct);
             PilotState = on;
             Log($"    pilot is {(on ? "ON" : "OFF")}.");
+            StateChanged?.Invoke();
+        }
+        finally { _lock.Release(); }
+    }
+
+    public async Task SetFocusFinderAsync(bool on, CancellationToken ct = default)
+    {
+        EnsureConnected();
+        await _lock.WaitAsync(ct);
+        try
+        {
+            Log($"    focusFinderOn = {(on ? "TRUE" : "FALSE")}");
+            var conn = _conn!;
+            var key  = _laser!.Key;
+            await Task.Run(() =>
+                conn.SetAttribute(key, "focusFinderOn",
+                    new byte[] { 0x00, 0x00, 0x00, 0x08 },
+                    new byte[] { (byte)(on ? 1 : 0), 0x00 }), ct);
+            FocusFinderState = on;
+            Log($"    focus finder is {(on ? "ON" : "OFF")}.");
             StateChanged?.Invoke();
         }
         finally { _lock.Release(); }
@@ -236,6 +287,11 @@ public sealed class LaserService : IDisposable
                 conn.Jog(axesCtrl.Key, direction);
             }, ct);
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log($"    Jog({direction}) ERROR: {ex.Message}");
+            throw;
+        }
         finally { _lock.Release(); }
     }
 
@@ -245,16 +301,22 @@ public sealed class LaserService : IDisposable
         await _lock.WaitAsync(ct);
         try
         {
-            Log("    ReferenceDrive starting...");
+            Log("    ReferenceDrive: GetAxesControl...");
             var conn    = _conn!;
             var machKey = _machControl!.Key;
             await Task.Run(() =>
             {
                 var axesCtrl = conn.GetAxesControl(machKey);
+                Log("    ReferenceDrive: sending...");
                 conn.ReferenceDrive(axesCtrl.Key);
             }, ct);
             Log("    ReferenceDrive command sent.");
             StateChanged?.Invoke();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log($"    ReferenceDrive ERROR: {ex.Message}");
+            throw;
         }
         finally { _lock.Release(); }
     }
@@ -262,7 +324,9 @@ public sealed class LaserService : IDisposable
     public async Task RefreshAxisPositionAsync(CancellationToken ct = default)
     {
         if (!IsConnected || _conn is null || _lifAxisKey is null) return;
-        await _lock.WaitAsync(ct);
+        // Skip this poll cycle if a user command (pilot, jog, etc.) is already running.
+        // Without this, timer ticks queue behind user commands and cause 5-15s delays.
+        if (!await _lock.WaitAsync(50, ct)) return;
         try
         {
             if (!IsConnected || _conn is null || _lifAxisKey is null) return;

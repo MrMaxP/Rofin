@@ -170,15 +170,14 @@ encoding — strip before XML parsing.
 
 Called on the IOR returned by `GetAxesControl()`.
 
-### `Jog(arg0, arg1, direction)` → void ✅
+### `Jog(axis, direction)` → void ✅
 
 Starts or stops axis jogging. The axis continues moving until a subsequent
-`Jog(0, 2, 0)` (STOP) is sent.
+`Jog(2, 0)` (STOP) is sent.
 
 ```
 Arguments:
-  arg0       ULong   0  (constant — always 0 in captures)
-  arg1       ULong   2  (constant — axis selector within AxesControl)
+  axis       ULong   2  (constant — LIF axis index within AxesControl)
   direction  ULong   see table below
 
 Direction values:
@@ -226,18 +225,112 @@ Current axis position in mm. Updates continuously while the axis is moving.
 
 ## IOControl
 
-### `ReadIOPort(portType, portIndex, something)` → sequence ✅
+Object returned by `GetIOControl()` on MachineControl.
 
-Reads a hardware I/O port. Observed calls from `Rofin-AxisTest.pcapng`:
+### `ReadIOPort(portType, portIndex)` → 4 bytes ✅
+
+Reads a hardware I/O port. Reply is a CDR `sequence<octet>` of 4 bytes.
 
 ```
-ReadIOPort(0, 5, 0)   — port type 0, port 5, sub-index 0
-ReadIOPort(0, 5, 1)   — port type 0, port 5, sub-index 1
-ReadIOPort(0, 3, 0)   — port type 0, port 3, sub-index 0
-ReadIOPort(0, 3, 1)   — port type 0, port 3, sub-index 1
+ReadIOPort(5, 0)    — observed in all captures; returns 01020100
+ReadIOPort(0, 5, 0) — 3-arg variant in Rofin-AxisTest.pcapng (port type 0, port 5, sub-index 0)
+ReadIOPort(0, 5, 1)
+ReadIOPort(0, 3, 0)
+ReadIOPort(0, 3, 1)
 ```
 
-Return value format and port mapping (end stops, sensors) are not yet decoded.
+The reply `01 02 01 00` is a bitmask of I/O port state. Port mapping (end stops,
+sensors, interlocks) is not yet decoded.
+
+### `WriteIOPort(data)` → void ✅
+
+Writes to a hardware I/O port. Body is 24 bytes of raw CDR:
+
+```
+portType    ULong = 5
+portIndex   ULong = 1
+mask_len    ULong = 4  — length of mask sequence
+mask[4]     bytes      — bits to affect
+val_len     ULong = 4  — length of value sequence
+val[4]      bytes      — bit values
+```
+
+Observed patterns (mask → value):
+- `00000000` → `00400000`  (set bit in byte 1)
+- `00000000` → `00000200`  (set bit in byte 2)
+- `00020000` → `00000200`  (mask+value)
+- `00400000` → `00400000`
+
+Port bit mapping not yet decoded.
+
+---
+
+## ProgramControl
+
+Object returned by `GetProgramControl()` on SystemControl. Manages job
+lifecycle and laser firing parameters.
+
+### `SignalProgramLoaded()` → void ✅
+
+Signals the controller that a job program has been loaded.
+
+### `SignalProgramStart()` → void ✅
+
+Signals the controller to begin program execution. Sent after `WriteIOPort`
+clears the stop bit.
+
+### `SignalProgramStop()` → void ✅
+
+Signals that the marking program has finished execution.
+
+### `SignalProgramUnLoaded()` → void ✅
+
+Signals that the job program has been unloaded. Sent after `SignalProgramStop`.
+
+### `StopProgram()` → void ✅
+
+Abort current program execution (seen in ws-outline.pcapng).
+
+### `Synchronize()` → void ✅
+
+Blocks until the controller has finished processing queued primitives.
+Called after each batch of `ExecutePrimitives`.
+
+### `SetLaserParameters(data)` → void ✅
+
+Sets laser firing parameters. Body is 24 bytes of raw CDR (encoding TBD — likely
+power, frequency, duty cycle, and speed settings). Called once per marking pass.
+
+---
+
+## GalvoControl (MarkControl)
+
+Object obtained alongside ProgramControl; handles scan head commands, field
+correction, and grey table. Object ID is `a8` in the ws-job/ws-outline session.
+
+### `ExecutePrimitives(data)` → void ✅
+
+Sends a batch of scan-head movement and laser-fire primitives to the galvo
+controller. Body is a CDR byte sequence (encoding TBD — likely fixed-size
+records containing primitive type, X/Y coordinates, speed, and laser state).
+
+Called multiple times per job; the controller queues them and processes
+asynchronously. Call `Synchronize()` on ProgramControl to wait for completion.
+
+### `SwitchFieldCorr(data)` → void ✅
+
+Activates field correction (distortion compensation for the scan field).
+Observed body: `01000000 01000000` (two ULongs, likely mode flags).
+
+### `WriteGreyTable(data)` → void ✅
+
+Writes a grey-level lookup table mapping intensity to power/speed. Body is
+24 bytes (encoding TBD). Called once before marking begins.
+
+### `SetAttribute("resetStopInDriver", bool)` → void ✅
+
+Clears the stop-in-driver flag before a marking run. Must be set to `true`
+(value 1) before calling `SignalProgramLoaded`.
 
 ---
 
@@ -251,16 +344,50 @@ asynchronous state change notifications. Arguments observed:
 
 Return value format not decoded.
 
+### `Logout(flag)` → void ✅
+
+Ends the session. Observed: `Logout(0)` (normal) and `Logout(1)` (shutdown).
+
+```
+Arguments:
+  flag   ULong   0 = normal logout, 1 = logout before shutdown
+```
+
+### `Shutdown()` → void ✅
+
+Shuts down the controller. Called on the SystemControl object after `Logout(1)`.
+
+---
+
+## CORBA object key structure
+
+All objects on the server share the server-prefix `14010f005253549X...` in
+their CORBA object key (where `X` is session-specific). The last 12 bytes
+encode two ULongs: `[obj_id, 1, obj_id+1]`. Objects can be distinguished
+by `obj_id` (bytes 15–18, LE). IDs are assigned per-session and match the
+IOR returned by the corresponding `Get*` call.
+
+Example session (ws-job / ws-outline):
+
+| obj_id | Interface | Operations |
+|--------|-----------|------------|
+| 0x51  | EventCtrl | PullEvents |
+| 0xa4  | ProgramControl | Signal*, Synchronize, SetLaserParameters |
+| 0xa6  | IOControl | ReadIOPort, WriteIOPort |
+| 0xa7  | PowerlineE (Laser) | GetAttribute, SetAttribute |
+| 0xa8  | GalvoControl | ExecutePrimitives, SwitchFieldCorr, WriteGreyTable |
+| 0xb0  | EventCtrl2 | PullEvents2, RefreshMasterAccess |
+
 ---
 
 ## Operations seen in captures but not yet implemented
 
 | Operation | Object | Notes |
 |---|---|---|
-| `GetProgramControl()` | SystemControl | Returns program execution controller |
 | `GetFileSystem()` | SystemControl | Returns file system accessor |
 | `GetConfiguration()` | SystemControl | Returns configuration accessor |
 | `GetSystemState()` | SystemControl | Returns system-wide state enum |
 | `GetObjectState()` | SystemControl | Returns detailed state struct |
-| `Logout()` | SystemControl | Seen at session end |
 | `_get_roleLevel()` | SystemControl | Returns current user role (integer) |
+| `PullEvents2(arg)` | EventCtrl2 | arg=2; confirmed in ws-focusfind.pcapng |
+| `RefreshMasterAccess(arg)` | EventCtrl2 | arg=32; keepalive for write access |

@@ -30,8 +30,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         get => _selectedPageIndex;
         set
         {
-            if (SetField(ref _selectedPageIndex, value))
-                OnPropertyChanged(nameof(CurrentPage));
+            if (!SetField(ref _selectedPageIndex, value)) return;
+            if (value == 2)
+                AxisPageVM.Activate();
+            else
+                AxisPageVM.Deactivate();
+            OnPropertyChanged(nameof(CurrentPage));
         }
     }
 

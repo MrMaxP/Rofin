@@ -23,18 +23,8 @@ public sealed class AxisPageViewModel : ViewModelBase
     public const double SWLimitTop    = -0.1;    // mm — top of travel (bed closest to laser)
     public const double SWLimitBottom = 119.5;   // mm — bottom of travel (hardware endstop)
 
-    readonly AsyncRelayCommand _fastDownCmd;
-    readonly AsyncRelayCommand _slowDownCmd;
-    readonly AsyncRelayCommand _stopCmd;
-    readonly AsyncRelayCommand _slowUpCmd;
-    readonly AsyncRelayCommand _fastUpCmd;
     readonly AsyncRelayCommand _referenceCmd;
 
-    public System.Windows.Input.ICommand FastDownCommand  => _fastDownCmd;
-    public System.Windows.Input.ICommand SlowDownCommand  => _slowDownCmd;
-    public System.Windows.Input.ICommand StopCommand      => _stopCmd;
-    public System.Windows.Input.ICommand SlowUpCommand    => _slowUpCmd;
-    public System.Windows.Input.ICommand FastUpCommand    => _fastUpCmd;
     public System.Windows.Input.ICommand ReferenceCommand => _referenceCmd;
 
     public bool IsConnected => _service.IsConnected;
@@ -61,14 +51,9 @@ public sealed class AxisPageViewModel : ViewModelBase
     {
         _service = service;
 
-        _fastDownCmd  = new AsyncRelayCommand(() => RunJog(JogFastDown),  () => IsConnected);
-        _slowDownCmd  = new AsyncRelayCommand(() => RunJog(JogSlowDown),  () => IsConnected);
-        _stopCmd      = new AsyncRelayCommand(() => RunJog(JogStop),      () => IsConnected);
-        _slowUpCmd    = new AsyncRelayCommand(() => RunJog(JogSlowUp),    () => IsConnected);
-        _fastUpCmd    = new AsyncRelayCommand(() => RunJog(JogFastUp),    () => IsConnected);
-        _referenceCmd = new AsyncRelayCommand(RunReference,               () => IsConnected);
+        _referenceCmd = new AsyncRelayCommand(RunReference, () => IsConnected);
 
-        service.StateChanged += () => Dispatcher.UIThread.Post(Refresh);
+        service.StateChanged += () => Dispatcher.UIThread.Post(OnServiceStateChanged);
 
         _posTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _posTimer.Tick += async (_, _) =>
@@ -76,7 +61,29 @@ public sealed class AxisPageViewModel : ViewModelBase
             try { await _service.RefreshAxisPositionAsync(); }
             catch { }
         };
-        _posTimer.Start();
+    }
+
+    public void Activate()
+    {
+        if (_service.IsConnected)
+            _posTimer.Start();
+    }
+
+    public void Deactivate()
+    {
+        _posTimer.Stop();
+    }
+
+    public void BeginJog(uint direction)
+    {
+        if (!_service.IsConnected) return;
+        _ = RunJog(direction);
+    }
+
+    public void EndJog()
+    {
+        if (!_service.IsConnected) return;
+        _ = RunJog(JogStop);
     }
 
     async Task RunJog(uint direction)
@@ -93,16 +100,13 @@ public sealed class AxisPageViewModel : ViewModelBase
         { /* swallow */ }
     }
 
-    void Refresh()
+    void OnServiceStateChanged()
     {
+        if (!_service.IsConnected)
+            _posTimer.Stop();
         OnPropertyChanged(nameof(IsConnected));
         OnPropertyChanged(nameof(PositionText));
         OnPropertyChanged(nameof(PositionPercent));
-        _fastDownCmd.Raise();
-        _slowDownCmd.Raise();
-        _stopCmd.Raise();
-        _slowUpCmd.Raise();
-        _fastUpCmd.Raise();
         _referenceCmd.Raise();
     }
 }
