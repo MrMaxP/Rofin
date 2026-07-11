@@ -381,10 +381,13 @@ public sealed class LaserService : IDisposable
 
     public async Task JogAsync(uint direction, CancellationToken ct = default)
     {
+        Log($"    Jog({direction}): called (IsConnected={IsConnected})");
         EnsureConnected();
+        Log($"    Jog({direction}): waiting for lock...");
         await _lock.WaitAsync(ct);
         try
         {
+            Log($"    Jog({direction}): sending...");
             var conn    = _conn!;
             var machKey = _machControl!.Key;
             await Task.Run(() =>
@@ -392,10 +395,13 @@ public sealed class LaserService : IDisposable
                 var axesCtrl = conn.GetAxesControl(machKey);
                 conn.Jog(axesCtrl.Key, direction);
             }, ct);
+            Log($"    Jog({direction}): OK");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Log($"    Jog({direction}) ERROR: {ex.Message}");
+            if (ex is System.IO.IOException)
+                DisconnectLocked();
             throw;
         }
         finally { _lock.Release(); }
@@ -443,7 +449,14 @@ public sealed class LaserService : IDisposable
             StateChanged?.Invoke();
         }
         catch (OperationCanceledException) { throw; }
-        catch { }
+        catch (System.IO.IOException ex)
+        {
+            // Socket error during position poll — the TCP stream is now corrupted.
+            // Disconnect immediately so the socket doesn't poison subsequent commands.
+            Log($"    position poll IO error: {ex.Message} — disconnecting");
+            DisconnectLocked();
+        }
+        catch { _lifAxisKey = null; }  // persistent failure: stop polling
         finally { _lock.Release(); }
     }
 

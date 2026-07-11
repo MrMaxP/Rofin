@@ -76,6 +76,7 @@ public sealed class AxisPageViewModel : ViewModelBase
 
     public void BeginJog(uint direction)
     {
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] BeginJog({direction}) IsConnected={_service.IsConnected}");
         if (!_service.IsConnected) return;
         _ = RunJog(direction);
     }

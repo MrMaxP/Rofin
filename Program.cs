@@ -16,6 +16,11 @@ class Program
             TestJogAsync().GetAwaiter().GetResult();
             return;
         }
+        if (args.Contains("--bridge-selftest"))
+        {
+            Environment.Exit(BridgeSelfTest.Run() ? 0 : 1);
+            return;
+        }
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

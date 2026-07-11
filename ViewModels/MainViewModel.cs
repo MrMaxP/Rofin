@@ -8,10 +8,11 @@ namespace LaserConsole.ViewModels;
 
 public sealed class MainViewModel : ViewModelBase, IDisposable
 {
-    readonly LaserService      _service;
-    readonly AsyncRelayCommand _connectCmd;
-    readonly AsyncRelayCommand _disconnectCmd;
-    readonly DispatcherTimer   _clockTimer;
+    readonly LaserService        _service;
+    readonly RofinBridgeService  _bridge;
+    readonly AsyncRelayCommand   _connectCmd;
+    readonly AsyncRelayCommand   _disconnectCmd;
+    readonly DispatcherTimer     _clockTimer;
 
     bool _busy;
 
@@ -19,6 +20,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public DevicesPageViewModel DevicesPageVM { get; }
     public AxisPageViewModel    AxisPageVM    { get; }
     public JobPageViewModel     JobPageVM     { get; }
+    public BridgePageViewModel  BridgePageVM  { get; }
 
     public System.Windows.Input.ICommand ConnectCommand    => _connectCmd;
     public System.Windows.Input.ICommand DisconnectCommand => _disconnectCmd;
@@ -45,6 +47,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         1 => (object)DevicesPageVM,
         2 => AxisPageVM,
         3 => JobPageVM,
+        4 => BridgePageVM,
         _ => StatusPageVM,
     };
 
@@ -77,11 +80,17 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public MainViewModel()
     {
         _service = new LaserService();
+        _bridge  = new RofinBridgeService();
 
         StatusPageVM  = new StatusPageViewModel(_service);
         DevicesPageVM = new DevicesPageViewModel(_service);
         AxisPageVM    = new AxisPageViewModel(_service);
         JobPageVM     = new JobPageViewModel(_service);
+        BridgePageVM  = new BridgePageViewModel(_bridge);
+
+        // Runs from app boot regardless of Rofin connection state, so
+        // LightBurn can detect the fake laser as soon as the app is open.
+        _bridge.Start();
 
         _connectCmd = new AsyncRelayCommand(
             ConnectAsync,
@@ -155,6 +164,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         _clockTimer.Stop();
         JobPageVM.Dispose();
+        BridgePageVM.Dispose();
+        _bridge.Dispose();
         _service.Dispose();
     }
 }

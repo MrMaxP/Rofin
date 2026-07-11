@@ -338,7 +338,7 @@ _IOR_REPLY_OPS = frozenset({
 })
 _NOARG_OPS = frozenset({
     'GetMachineControl', 'GetLaser', 'GetAxesControl', 'GetAllComponents',
-    'GetClassInfos', 'ReferenceDrive', 'GetIOControl',
+    'GetClassInfos', 'GetIOControl',
     '_get_genericName', '_get_className', '_get_id', '_get_classInfo', '_get_roleLevel',
     'SignalProgramLoaded', 'SignalProgramUnLoaded', 'SignalProgramStart',
     'SignalProgramStop', 'StopProgram', 'Synchronize',
@@ -363,6 +363,8 @@ def decode_request(op: str, body: bytes, le: bool) -> str:
             return f'SetAttribute("{name}", tc={tc}, val={val[:8].hex()})'
         if op == 'GetAttribute':
             return f'GetAttribute("{r.string()}")'
+        if op == 'ReferenceDrive':
+            return f'ReferenceDrive(axis={r.u32()})'
         if op == 'Jog':
             return f'Jog(axis={r.u32()}, direction={r.u32()})'
         if op == 'PullEvents2':

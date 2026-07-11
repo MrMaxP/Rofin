@@ -260,7 +260,7 @@ sealed class GiopConn : IDisposable
     public void Shutdown(byte[] key)
         => InvokeOk(key, "Shutdown", _ => { });
 
-    // Axis control — verified from Rofin-AxisTest.pcapng
+    // Axis control — GetAxesControl is on MachineCtrl (not SystemCtrl).
     public ObjRef GetAxesControl(byte[] machCtrlKey)
         => ReadIor(InvokeOk(machCtrlKey, "GetAxesControl", _ => { }));
 
@@ -271,8 +271,9 @@ sealed class GiopConn : IDisposable
     public void Jog(byte[] axesCtrlKey, uint direction)
         => InvokeOk(axesCtrlKey, "Jog", c => { c.ULong(2); c.ULong(direction); });
 
+    // axis=2 is the LIF axis index — confirmed from ws-referenceaxis.pcapng args bytes 00000002
     public void ReferenceDrive(byte[] axesCtrlKey)
-        => InvokeOk(axesCtrlKey, "ReferenceDrive", _ => { });
+        => InvokeOk(axesCtrlKey, "ReferenceDrive", c => c.ULong(2));
 
     public double? GetDoubleAttribute(byte[] key, string name)
     {

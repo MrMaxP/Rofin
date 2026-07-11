@@ -23,6 +23,12 @@
     <DataTemplate DataType="{x:Type vm:AxisPageViewModel}">
       <views:AxisPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:JobPageViewModel}">
+      <views:JobPage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:BridgePageViewModel}">
+      <views:BridgePage />
+    </DataTemplate>
   </Application.DataTemplates>
 
 </Application>
